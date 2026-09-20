@@ -16,6 +16,11 @@ Discover and read manga, webtoons, comics, and more – easier than ever on your
 [![License: Apache-2.0](https://img.shields.io/github/license/mihonapp/mihon?labelColor=27303D&color=0877d2)](/LICENSE)
 [![Translation status](https://img.shields.io/weblate/progress/mihon?labelColor=27303D&color=946300)](https://hosted.weblate.org/engage/mihon/)
 
+## 本次构建改动
+
+* 修复在大型书架下浏览在线源时，浏览列表逐项创建的本地数据库订阅长期运行在主线程的问题；数据库查询和映射现已调度到 IO，避免打开较多作品后浏览卡顿和设备发热。
+* 该问题属于 Mihon 浏览页的调度器回归，不是 Hitomi 扩展的累计状态问题；本次未修改 Hitomi 扩展。
+
 ## Download
 
 [![Mihon Stable](https://img.shields.io/github/release/mihonapp/mihon.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://mihon.app/download)
