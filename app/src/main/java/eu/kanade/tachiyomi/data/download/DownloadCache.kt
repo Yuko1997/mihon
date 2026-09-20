@@ -86,8 +86,15 @@ class DownloadCache(
     /**
      * The last time the cache was refreshed.
      */
+    @Volatile
     private var lastRenew = 0L
     private var renewalJob: Job? = null
+
+    private val initializationLock = Any()
+
+    @Volatile
+    private var isCacheInitialized = false
+    private var invalidationRequestedDuringInitialization = false
 
     private val _isInitializing = MutableStateFlow(false)
     val isInitializing = _isInitializing
@@ -95,7 +102,7 @@ class DownloadCache(
         .stateIn(scope, SharingStarted.WhileSubscribed(), false)
 
     private val diskCacheFile: File
-        get() = File(context.cacheDir, "dl_index_cache_v3")
+        get() = File(context.noBackupFilesDir, "dl_index_cache_v3")
 
     private val rootDownloadsDirMutex = Mutex()
     private var rootDownloadsDir = RootDirectory(storageManager.getDownloadsDirectory())
@@ -103,6 +110,7 @@ class DownloadCache(
     init {
         // Attempt to read cache file
         scope.launch {
+            var initializedFromDisk = false
             rootDownloadsDirMutex.withLock {
                 try {
                     if (diskCacheFile.exists()) {
@@ -110,12 +118,28 @@ class DownloadCache(
                             ProtoBuf.decodeFromByteArray<RootDirectory>(it.readBytes())
                         }
                         rootDownloadsDir = diskCache
-                        lastRenew = System.currentTimeMillis()
+                        initializedFromDisk = true
                     }
                 } catch (e: Throwable) {
                     logcat(LogPriority.ERROR, e) { "Failed to initialize from disk cache" }
                     diskCacheFile.delete()
                 }
+            }
+            val shouldRenew = synchronized(initializationLock) {
+                isCacheInitialized = true
+                if (initializedFromDisk && !invalidationRequestedDuringInitialization) {
+                    lastRenew = System.currentTimeMillis()
+                    false
+                } else {
+                    lastRenew = 0L
+                    true
+                }
+            }
+
+            if (shouldRenew) {
+                renewCache()
+            } else {
+                notifyChanges()
             }
         }
 
@@ -323,7 +347,12 @@ class DownloadCache(
     }
 
     fun invalidateCache() {
-        lastRenew = 0L
+        synchronized(initializationLock) {
+            lastRenew = 0L
+            if (!isCacheInitialized) {
+                invalidationRequestedDuringInitialization = true
+            }
+        }
         renewalJob?.cancel()
         diskCacheFile.delete()
         renewCache()
@@ -333,6 +362,10 @@ class DownloadCache(
      * Renews the downloads cache.
      */
     private fun renewCache() {
+        if (!isCacheInitialized) {
+            return
+        }
+
         // Avoid renewing cache if in the process nor too often
         if (lastRenew + renewInterval >= System.currentTimeMillis() || renewalJob?.isActive == true) {
             return
