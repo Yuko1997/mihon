@@ -362,6 +362,64 @@ class DownloadCache(
         notifyChanges()
     }
 
+    /**
+     * Removes downloaded directories that were deleted outside the normal chapter deletion flow.
+     *
+     * This updates the in-memory index directly so callers don't need to rebuild the whole
+     * downloads cache after cleaning up one or more folders.
+     *
+     * @param mangaFolders pairs of source and manga directory names to remove entirely.
+     * @param chapterNames chapter directory names to remove from specific manga folders.
+     */
+    suspend fun removeDownloadedEntries(
+        mangaFolders: Set<Pair<String, String>>,
+        chapterNames: Map<Pair<String, String>, Set<String>>,
+    ) {
+        if (mangaFolders.isEmpty() && chapterNames.isEmpty()) return
+
+        val removedMangaKeys = mangaFolders.mapTo(HashSet()) { (source, manga) ->
+            downloadsFolderKey(source, manga)
+        }
+        val removedChapterNames = chapterNames.entries.associate { (folder, names) ->
+            downloadsFolderKey(folder.first, folder.second) to names.mapTo(HashSet()) { it.lowercase() }
+        }
+
+        var changed = false
+        rootDownloadsDirMutex.withLock {
+            val updatedSources = rootDownloadsDir.sourceDirs.toMutableMap()
+            updatedSources.entries.toList().forEach { (sourceId, sourceDir) ->
+                val sourceDirName = sourceDir.dir?.name ?: return@forEach
+                val updatedMangaDirs = sourceDir.mangaDirs.toMutableMap()
+
+                updatedMangaDirs.entries.toList().forEach { (mangaDirName, mangaDir) ->
+                    val folderKey = downloadsFolderKey(sourceDirName, mangaDirName)
+                    when {
+                        folderKey in removedMangaKeys -> {
+                            updatedMangaDirs -= mangaDirName
+                            changed = true
+                        }
+                        removedChapterNames[folderKey].orEmpty().isNotEmpty() -> {
+                            val names = removedChapterNames.getValue(folderKey)
+                            val remaining = mangaDir.chapterDirs.filterNot { it.lowercase() in names }.toSet()
+                            if (remaining.size != mangaDir.chapterDirs.size) {
+                                mangaDir.chapterDirs = remaining
+                                changed = true
+                            }
+                        }
+                    }
+                }
+
+                sourceDir.mangaDirs = updatedMangaDirs
+                if (updatedMangaDirs.isEmpty()) {
+                    updatedSources -= sourceId
+                }
+            }
+            rootDownloadsDir.sourceDirs = updatedSources
+        }
+
+        if (changed) notifyChanges()
+    }
+
     fun invalidateCache() {
         lastRenew = 0L
         renewalJob?.cancel()
@@ -536,4 +594,8 @@ private object UniFileAsStringSerializer : KSerializer<UniFile?> {
             decoder.decodeNull()
         }
     }
+}
+
+private fun downloadsFolderKey(sourceDirName: String, mangaDirName: String): String {
+    return sourceDirName.lowercase() + '\u0000' + mangaDirName.lowercase()
 }

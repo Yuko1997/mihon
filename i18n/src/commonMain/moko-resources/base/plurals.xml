@@ -35,6 +35,36 @@
         <item quantity="other">%1$s remaining</item>
     </plurals>
 
+    <plurals name="download_cleanup_works">
+        <item quantity="one">%d work</item>
+        <item quantity="other">%d works</item>
+    </plurals>
+
+    <plurals name="download_cleanup_work_copies">
+        <item quantity="one">%d work copy</item>
+        <item quantity="other">%d work copies</item>
+    </plurals>
+
+    <plurals name="download_cleanup_duplicate_copies">
+        <item quantity="one">%d extra chapter copy</item>
+        <item quantity="other">%d extra chapter copies</item>
+    </plurals>
+
+    <plurals name="download_cleanup_temp_files">
+        <item quantity="one">%d temporary file</item>
+        <item quantity="other">%d temporary files</item>
+    </plurals>
+
+    <plurals name="download_cleanup_deleted_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+
+    <plurals name="download_cleanup_failed_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+
     <plurals name="day">
         <item quantity="one">1 day</item>
         <item quantity="other">%d days</item>

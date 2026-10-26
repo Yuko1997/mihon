@@ -12,6 +12,7 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.automirroredrounded.Label
 import mihon.icons.materialsymbols.rounded.CloudOff
+import mihon.icons.materialsymbols.rounded.DeleteSweep
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.Eyeglasses2
 import mihon.icons.materialsymbols.rounded.Info
@@ -34,6 +35,7 @@ fun MoreScreen(
     incognitoMode: Boolean,
     onIncognitoModeChange: (Boolean) -> Unit,
     onClickDownloadQueue: () -> Unit,
+    onClickDownloadCleanup: () -> Unit,
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
     onClickDataAndStorage: () -> Unit,
@@ -98,6 +100,14 @@ fun MoreScreen(
                     },
                     icon = MaterialSymbols.Rounded.Download,
                     onPreferenceClick = onClickDownloadQueue,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.download_cleanup_title),
+                    subtitle = stringResource(MR.strings.download_cleanup_summary_short),
+                    icon = MaterialSymbols.Rounded.DeleteSweep,
+                    onPreferenceClick = onClickDownloadCleanup,
                 )
             }
             item {
